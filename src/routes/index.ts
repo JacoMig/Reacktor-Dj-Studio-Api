@@ -1,96 +1,98 @@
 import ytdl from "@distube/ytdl-core";
+
 import { FastifyPluginAsync } from "fastify";
-import yts, { VideoSearchResult } from "yt-search";
+import yts from "yt-search";
+
 
 type GetStreamRequest = {
-    videoId: string
-}
+  videoId: string;
+};
 
 type SearchRequest = {
-    q: string
-}
+  q: string;
+};
 
 type SearchVideoResponse = {
-    timestamp: string,
-    videoId: string,
-    thumbnail?: string,
-    title: string,
-    url: string
-}[]
+  timestamp: string;
+  videoId: string;
+  thumbnail?: string;
+  title: string;
+  url: string;
+}[];
 
 type SearchResponse = {
-    count: number
-    videos?: SearchVideoResponse
-}
+  count: number;
+  videos?: SearchVideoResponse;
+};
 
 const routes: FastifyPluginAsync = async (server) => {
-  server.post<{Body: GetStreamRequest}>(
+  server.post<{ Body: GetStreamRequest }>(
     "/getStream",
     {
-       schema: {
+      schema: {
         body: {
-            type: "object",
-            properties: {
-              videoId: { type: 'string' }
-            }
-        }
-
-      }, 
+          type: "object",
+          properties: {
+            videoId: { type: "string" },
+          },
+        },
+      },
     },
-    async (request, response) => {
-      ytdl.createProxyAgent({ uri: 'http://localhost:5173' });
-      const t = ytdl(`http://www.youtube.com/watch?v=${request.body.videoId}`, {
-        filter: "audioonly"
-      })
+    async (request) => {
       
-      return t;
+      try {
+
+        
+        const videoUrl = `http://www.youtube.com/watch?v=${request.body.videoId}`;
+
+        if (!ytdl.validateURL(videoUrl)) {
+          throw new Error("Invalid YouTube URL");
+        }
+        const audioStream = ytdl(videoUrl, {
+          filter: 'audioonly',
+        }); 
+        return audioStream
+    
+      } catch(e) {
+        throw new Error(e as string)
+        
+      }
+      
     }
   );
 
-  server.get<{Querystring: SearchRequest, Response: SearchResponse }>(
+  server.get<{ Querystring: SearchRequest; Response: SearchResponse }>(
     "/search",
     {
-        schema: {
-            querystring: {
-                type: "object",
-                properties: {
-                    query: {type: 'string'}
-                }
-            },
-            /* response: {
-                200: {
-                    type: "object",
-                    properties: {
-                        timestamp: {type: 'string'},
-                        videoId: {type: 'string'},
-                        thumbnail: {type: 'string'},
-                        title: {type: 'string'}
-                    }
-                }
-            } */
-        }, 
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            query: { type: "string" },
+          },
+        },
+      },
     },
-    async (request, response):Promise<SearchResponse> => {
-        const query = request.query.q
+    async (request): Promise<SearchResponse> => {
+      const query = request.query.q;
 
-        if(!query || query === "") 
-            return {
-                count: 0
-            }
-        
-
-        const resp = await yts({search: query})
-        
+      if (!query || query === "")
         return {
-            count: resp.videos.length,
-            videos: resp.videos.map(r => ({
-                thumbnail: r.thumbnail,
-                timestamp: r.timestamp,
-                videoId: r.videoId,
-                title: r.title,
-                url: r.url
-            })) 
+          count: 0,
         };
+
+      const resp = await yts({ search: query });
+
+      return {
+        count: resp.videos.length,
+        videos: resp.videos.map((r) => ({
+          thumbnail: r.thumbnail,
+          timestamp: r.timestamp,
+          videoId: r.videoId,
+          title: r.title,
+          url: r.url,
+        })),
+      };
     }
   );
 };
