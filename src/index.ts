@@ -4,6 +4,7 @@ const app = fastify({
     logger: true
 })
 app.register(import('./routes'))
+app.register(import('./plugins/s3Client'))
 app.register(cors)
 app.listen({host: 'localhost', port: 2000 }, (err) => {
     if (err) {

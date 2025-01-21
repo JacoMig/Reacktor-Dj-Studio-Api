@@ -1,8 +1,8 @@
 import ytdl from "@distube/ytdl-core";
+import { S3 } from "aws-sdk";
 
 import { FastifyPluginAsync } from "fastify";
 import yts from "yt-search";
-
 
 type GetStreamRequest = {
   videoId: string;
@@ -25,6 +25,15 @@ type SearchResponse = {
   videos?: SearchVideoResponse;
 };
 
+type LoadDemoSongsResponse = {
+  count: number;
+  data: {
+    contentType?: string;
+    title?: string;
+    blob?: string;
+  }[];
+};
+
 const routes: FastifyPluginAsync = async (server) => {
   server.post<{ Body: GetStreamRequest }>(
     "/getStream",
@@ -39,25 +48,19 @@ const routes: FastifyPluginAsync = async (server) => {
       },
     },
     async (request) => {
-      
       try {
-
-        
         const videoUrl = `http://www.youtube.com/watch?v=${request.body.videoId}`;
 
         if (!ytdl.validateURL(videoUrl)) {
           throw new Error("Invalid YouTube URL");
         }
         const audioStream = ytdl(videoUrl, {
-          filter: 'audioonly',
-        }); 
-        return audioStream
-    
-      } catch(e) {
-        throw new Error(e as string)
-        
+          filter: "audioonly",
+        });
+        return audioStream;
+      } catch (e) {
+        throw new Error(e as string);
       }
-      
     }
   );
 
@@ -93,6 +96,42 @@ const routes: FastifyPluginAsync = async (server) => {
           url: r.url,
         })),
       };
+    }
+  );
+
+  server.get(
+    "/loadDemoSongs",
+    async (): Promise<LoadDemoSongsResponse> => {
+      const demoSongs = await server.s3Client.listObjects({
+        Bucket: "demo-songs",
+      });
+
+      if (!demoSongs.Contents) return { count: 0, data: [] };
+
+      const demoSongsPromise = Promise.all(
+        demoSongs.Contents.map(async (song) => {
+          const res = await server.s3Client.getObject({
+            Bucket: "demo-songs",
+            Key: song.Key!,
+          });
+          return {...res, title: song.Key};
+        })
+      );
+      
+      const songs = await demoSongsPromise;
+      
+      return {
+        count: songs.length,
+        data: songs.map((song) => (
+            {
+              contentType: song.ContentType,
+              title: song.title,
+              blob: song.Body?.toString("base64"),
+            }
+        )),
+      };
+
+      
     }
   );
 };
