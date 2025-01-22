@@ -12,7 +12,9 @@ declare module 'fastify' {
 export default fp(async (server, opts) => {
      const S3Instance = new S3({
         accessKeyId: process.env.AWS_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_SECRET_KEY
+        secretAccessKey: process.env.AWS_SECRET_KEY,
+        signatureVersion: 'v4',
+        region: 'eu-central-1'
     });
     
     const s3Client = createS3Lib(S3Instance)

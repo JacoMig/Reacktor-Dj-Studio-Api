@@ -28,9 +28,8 @@ type SearchResponse = {
 type LoadDemoSongsResponse = {
   count: number;
   data: {
-    contentType?: string;
-    title?: string;
-    blob?: string;
+    url: string;
+    title: string;
   }[];
 };
 
@@ -99,41 +98,20 @@ const routes: FastifyPluginAsync = async (server) => {
     }
   );
 
-  server.get(
-    "/loadDemoSongs",
-    async (): Promise<LoadDemoSongsResponse> => {
-      const demoSongs = await server.s3Client.listObjects({
-        Bucket: "demo-songs",
-      });
+  server.get("/getDemoSongKeys", async (): Promise<LoadDemoSongsResponse> => {
+    
+    const demoSongsUrls = await server.s3Client.getSignedUrls({
+      Bucket: "demo-songs",
+    });
 
-      if (!demoSongs.Contents) return { count: 0, data: [] };
-
-      const demoSongsPromise = Promise.all(
-        demoSongs.Contents.map(async (song) => {
-          const res = await server.s3Client.getObject({
-            Bucket: "demo-songs",
-            Key: song.Key!,
-          });
-          return {...res, title: song.Key};
-        })
-      );
-      
-      const songs = await demoSongsPromise;
-      
-      return {
-        count: songs.length,
-        data: songs.map((song) => (
-            {
-              contentType: song.ContentType,
-              title: song.title,
-              blob: song.Body?.toString("base64"),
-            }
-        )),
-      };
-
-      
-    }
-  );
+    return {
+      count: demoSongsUrls.length || 0,
+      data: demoSongsUrls.length ? demoSongsUrls.map((item) => ({
+        url: item.url,
+        title: item.title,
+      })) : [],
+    };
+  });
 };
 
 export default routes;
