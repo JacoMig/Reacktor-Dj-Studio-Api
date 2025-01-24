@@ -5,26 +5,32 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:local": "npx tsc -w & nodemon --env-file=.env ./dist/index.js",
+    "start": "sls offline",
     "build": "tsc",
-    "start": "node ./dist/index.js",
+    "deploy": "sls deploy",
     "lint": "npx eslint ."
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@distube/ytdl-core": "^4.15.8",
+    "@fastify/aws-lambda": "^5.1.1",
     "@fastify/cors": "^10.0.1",
     "aws-sdk": "^2.1692.0",
     "fastify": "^5.1.0",
     "fs": "^0.0.1-security",
     "nodemon": "^3.1.7",
+    "serverless-offline": "^14.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3",
     "uuid": "^11.0.3",
     "yt-search": "^2.12.1"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
     "@types/yt-search": "^2.10.3"
+  },
+  "engines": {
+    "node": ">=16.16.0"
   }
 }
